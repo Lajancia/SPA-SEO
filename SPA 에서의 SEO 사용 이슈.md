@@ -157,7 +157,7 @@ Github: https://github.com/isomorphic-microfrontends
 
 ### **root-config 코드 분석** ###
 
-![root-config 코그 분석]()
+![root-config](https://user-images.githubusercontent.com/50996139/116282424-b3b03e80-a7c5-11eb-98b8-f02d0d15ba30.jpg)
 
 </br>
 
