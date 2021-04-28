@@ -183,7 +183,7 @@ Github: https://github.com/isomorphic-microfrontends
 
 **root-config**
 * webpack.config.cjs : 다른 파일의 webpack.config.js와 다른 파일. 웹팩 파일로 변경할 시 오류 발생
-* node-loader.config.js : @node-loader/import-maps 와 @node-loader/http 사용. nodejs에서의 동적 모듈 로딩을 가능하게 하기 위한 것이다.
+* node-loader.config.js : @node-loader/import-maps 와 @node-loader/http 사용. nodejs에서의 fetch 단계의 동적 모듈 로딩을 가능하게 하기 위한 것이다.
 
 </br>
 
