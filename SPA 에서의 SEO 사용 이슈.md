@@ -347,7 +347,28 @@ app.use("*", (req, res, next) => {
 
 4. HTTP Response Body : 성능을 극대화 하기 위해서, 웹 서버에서 브라우저로 전송된 HTTP 응답을 바이트 단위로 스트리밍해야 한다. 언급된 모든 마이크로 프론트 엔드 레이아웃 미들웨어는 HTML 응답 본문을 브라우저로 스트리밍한다. single-spa-layout의 경우, sendLayoutHTTPResponse를 불러 동작한다.
 
-5. Hydrate : Hydration은 자바스크립트 초기화와 서버에서 전달받은 이벤트 리스너를 HTML에 적용하는 것을 말한다. single-spa-layout의 역할은 어떤 마이크로 프론트엔드가 어떤 부분의 DOM을 hydrate 할 지를 결정하는 것이다. 이는 contructLayoutEngine 과 singleSpa.start()를 통해 자동으로 수행된다.
+</br>
+
+```javascript
+import "./set-public-path";
+import React from "react";
+import ReactDOM from "react-dom";
+import singleSpaReact from "single-spa-react";
+import Root from "./root.component";
+
+const lifecycles = singleSpaReact({
+  React,
+  ReactDOM,
+  rootComponent: Root,
+  renderType: "hydrate"
+});
+
+export const bootstrap = lifecycles.bootstrap;
+export const mount = lifecycles.mount;
+export const unmount = lifecycles.unmount;
+````
+
+5. Hydrate : Hydration은 자바스크립트 초기화와 서버에서 전달받은 이벤트 리스너를 HTML에 적용하는 것을 말한다. single-spa-layout의 역할은 어떤 마이크로 프론트엔드가 어떤 부분의 DOM을 hydrate 할 지를 결정하는 것이다. 이는 contructLayoutEngine 과 singleSpa.start()를 통해 자동으로 수행된다. 위의 코드는 react의 hydrate 옵션을 적용한 것이다.
 
 </br>
 
