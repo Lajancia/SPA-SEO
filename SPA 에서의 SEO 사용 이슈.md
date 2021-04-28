@@ -242,6 +242,8 @@ Github: https://github.com/isomorphic-microfrontends
 
 1. Layout : /server/views/index.html에 존재. single-spa-layout을 통해 모든 경로를 핸들링할 하나의 템플릿을 정의한다. 이때 사용되는 single-spa-layout은 single-spa 공식 레이아웃 엔진이다.
 
+</br>
+
 ```javascript
 
 import { app } from "./app.js";
@@ -347,6 +349,7 @@ app.use("*", (req, res, next) => {
 
 5. Hydrate : Hydration은 자바스크립트 초기화와 서버에서 전달받은 이벤트 리스너를 HTML에 적용하는 것을 말한다. single-spa-layout의 역할은 어떤 마이크로 프론트엔드가 어떤 부분의 DOM을 hydrate 할 지를 결정하는 것이다. 이는 contructLayoutEngine 과 singleSpa.start()를 통해 자동으로 수행된다.
 
+</br>
 
 **이슈 사항**
 >현재까지로는 React를 기반으로 한 예제밖에 제공하지 않는다. 따라서 vue.js를 기반으로 하여 SSR을 적용하기 어렵다.
