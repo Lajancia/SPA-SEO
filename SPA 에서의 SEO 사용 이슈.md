@@ -187,6 +187,167 @@ Github: https://github.com/isomorphic-microfrontends
 
 </br>
 
+
+### **Single-SPA의 SSR Implementation 핵심 코드** ##
+
+**index.html**
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Isomorphic Microfrontends</title>
+    <meta
+      name="importmap-type"
+      content="systemjs-importmap"
+      server-cookie
+      server-only
+    />
+    <script src="https://cdn.jsdelivr.net/npm/import-map-overrides@2.0.0/dist/import-map-overrides.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/systemjs@6.6.1/dist/system.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/systemjs@6.6.1/dist/extras/amd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/systemjs@6.6.1/dist/extras/named-exports.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+    />
+    <assets></assets>
+  </head>
+  <body>
+    <template id="single-spa-layout">
+      <single-spa-router>
+        <application name="@isomorphic-mf/navbar" props="user"></application>
+        <route path="pokemons">
+          <application
+            name="@isomorphic-mf/pokemons"
+            props="user"
+          ></application>
+        </route>
+      </single-spa-router>
+    </template>
+    <fragment name="importmap"></fragment>
+    <script>
+      System.import("@isomorphic-mf/root-config");
+    </script>
+    <import-map-overrides-full
+      show-when-local-storage="devtools"
+      dev-libs
+    ></import-map-overrides-full>
+  </body>
+</html>
+
+````
+
+1. Layout : /server/views/index.html에 존재. single-spa-layout을 통해 모든 경로를 핸들링할 하나의 템플릿을 정의한다. 이때 사용되는 single-spa-layout은 single-spa 공식 레이아웃 엔진이다.
+
+```javascript
+
+import { app } from "./app.js";
+import {
+  constructServerLayout,
+  sendLayoutHTTPResponse,
+} from "single-spa-layout/server";
+import _ from "lodash";
+import { getImportMaps } from "single-spa-web-server-utils";
+
+const serverLayout = constructServerLayout({
+  filePath: "server/views/index.html",
+});
+
+
+app.use("*", (req, res, next) => {
+  const developmentMode = process.env.NODE_ENV === "development";
+  const importSuffix = developmentMode ? `?ts=${Date.now()}` : "";
+
+  const importMapsPromise = getImportMaps({
+    url:
+      "https://storage.googleapis.com/isomorphic.microfrontends.app/importmap.json",
+    nodeKeyFilter(importMapKey) {
+      return importMapKey.startsWith("@isomorphic-mf");
+    },
+    req,
+    allowOverrides: true,
+  }).then(({ nodeImportMap, browserImportMap }) => {
+    global.nodeLoader.setImportMapPromise(Promise.resolve(nodeImportMap));
+    if (developmentMode) {
+      browserImportMap.imports["@isomorphic-mf/root-config"] =
+        "http://localhost:9876/isomorphic-mf-root-config.js";
+      browserImportMap.imports["@isomorphic-mf/root-config/"] =
+        "http://localhost:9876/";
+    }
+    return { nodeImportMap, browserImportMap };
+  });
+
+  const props = {
+    user: {
+      id: 1,
+      name: "Test User",
+    },
+  };
+
+  const fragments = {
+    importmap: async () => {
+      const { browserImportMap } = await importMapsPromise;
+      return `<script type="systemjs-importmap">${JSON.stringify(
+        browserImportMap,
+        null,
+        2
+      )}</script>`;
+    },
+  };
+
+  const renderFragment = (name) => fragments[name]();
+////
+///이 아래부터 동일
+  sendLayoutHTTPResponse({
+    serverLayout,
+    urlPath: req.originalUrl,
+    res,
+    renderFragment,
+    async renderApplication({ appName, propsPromise }) {
+      await importMapsPromise;
+      const [app, props] = await Promise.all([
+        import(appName + `/server.mjs${importSuffix}`),
+        propsPromise,
+      ]);
+      return app.serverRender(props);
+    },
+    async retrieveApplicationHeaders({ appName, propsPromise }) {///
+      await importMapsPromise;
+      const [app, props] = await Promise.all([
+        import(appName + `/server.mjs${importSuffix}`),
+        propsPromise,
+      ]);
+      return app.getResponseHeaders(props);
+    },
+    async retrieveProp(propName) {/////
+      return props[propName];
+    },
+    assembleFinalHeaders(allHeaders) {/////
+      return Object.assign({}, Object.values(allHeaders));
+    },
+  })
+    .then(next)
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("A server error occurred");
+    });
+});
+
+````
+
+
+2. Fetch : /server/index-html.js 파일에 존재한다. single-spa-layout을 사용할 때, renderApplication 함수가 마이크로프론트엔드를 패치한다. 이는 renderServerResponseBody에 제공된다. module loading 방식과 http request 방식 두 가지가 존재하는데, 보통의 경우에는 적은 인프라가 필요하고 더 나은 성능을 가진 module loading 방식을 선호한다.
+
+3. HTTP Response Headers : 브라우저로 전송되는 HTTP 응답 헤더는 각각의 마이크로프론트엔드에서 추출된 디폴트 헤더와 헤더의 결합이다.  Single-spa-layoyt에서는 assemvleFinalHeaders 옵션으로 통해 맞춤 병합을 허용한다.
+
+4. HTTP Response Body : 성능을 극대화 하기 위해서, 웹 서버에서 브라우저로 전송된 HTTP 응답을 바이트 단위로 스트리밍해야 한다. 언급된 모든 마이크로 프론트 엔드 레이아웃 미들웨어는 HTML 응답 본문을 브라우저로 스트리밍한다. single-spa-layout의 경우, sendLayoutHTTPResponse를 불러 동작한다.
+
+5. Hydrate : Hydration은 자바스크립트 초기화와 서버에서 전달받은 이벤트 리스너를 HTML에 적용하는 것을 말한다. single-spa-layout의 역할은 어떤 마이크로 프론트엔드가 어떤 부분의 DOM을 hydrate 할 지를 결정하는 것이다. 이는 contructLayoutEngine 과 singleSpa.start()를 통해 자동으로 수행된다.
+
+
 **이슈 사항**
 >현재까지로는 React를 기반으로 한 예제밖에 제공하지 않는다. 따라서 vue.js를 기반으로 하여 SSR을 적용하기 어렵다.
 
