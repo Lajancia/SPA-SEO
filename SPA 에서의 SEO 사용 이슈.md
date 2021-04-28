@@ -189,6 +189,7 @@ Github: https://github.com/isomorphic-microfrontends
 
 **이슈 사항**
 >현재까지로는 React를 기반으로 한 예제밖에 제공하지 않는다. 따라서 vue.js를 기반으로 하여 SSR을 적용하기 어렵다.
+
 >root-config 파일은 다른 navbar와 pokemons 파일이 존재하지 않아도 서버가 동작할 시 화면이 정상적으로 출력된다. 로컬에서 파일을 받아 올리는 것이 아니라, 외부의 파일을 받아오는 것으로 추측한다.
 
 </br>
